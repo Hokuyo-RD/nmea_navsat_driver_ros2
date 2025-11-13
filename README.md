@@ -21,5 +21,8 @@ pip install src/nmea_navsat_driver/
 pip install transforms3d
 pip uninstall numpy
 pip install "numpy<1.24"
+pip uninstall serial
+pip uninstall pyserial
+pip install pyserial
 sudo apt-get install ros-humble-tf-transformations
 ```
