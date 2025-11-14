@@ -40,7 +40,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix, NavSatStatus, TimeReference
 from geometry_msgs.msg import TwistStamped, QuaternionStamped
 
-from nmea_msgs.msg import Gpgga, Gprmc
+from nmea_msgs.msg import Gpgga, Gprmc, Gpzda
 
 from tf_transformations import quaternion_from_euler
 from libnmea_navsat_driver.checksum_utils import check_nmea_checksum
@@ -57,6 +57,7 @@ class Ros2NMEADriver(Node):
 
         self.gga_pub = self.create_publisher(Gpgga, 'gga', 1)
         self.rmc_pub = self.create_publisher(Gprmc, 'rmc', 1)
+        self.zda_pub = self.create_publisher(Gpzda, 'zda', 1)
 
         self.time_ref_source = self.declare_parameter('time_ref_source', 'gps').value
         self.use_RMC = self.declare_parameter('useRMC', False).value
@@ -155,6 +156,9 @@ class Ros2NMEADriver(Node):
         current_rmc = Gprmc()
         current_rmc.header.stamp = current_time
         current_rmc.header.frame_id = frame_id
+        current_zda = Gpzda()
+        current_zda.header.stamp = current_time
+        current_zda.header.frame_id = frame_id
 
         current_gga.header.frame_id = frame_id
         if not self.use_GNSS_time:
@@ -224,6 +228,8 @@ class Ros2NMEADriver(Node):
             current_gga.altitude_units = "M"
             current_gga.undulation = data['mean_sea_level']
             current_gga.undulation_units = "M"
+            if not math.isnan(data['utc_time'][0]):
+                current_gga.utc_seconds = data['utc_time'][0] + data['utc_time'][1] / 1e9
             
             self.fix_pub.publish(current_fix)
             self.gga_pub.publish(current_gga)
@@ -321,6 +327,16 @@ class Ros2NMEADriver(Node):
                 current_heading.quaternion.z = q[2]
                 current_heading.quaternion.w = q[3]
                 self.heading_pub.publish(current_heading)
+        elif 'ZDA' in parsed_sentence:
+            data = parsed_sentence['ZDA']
+            if not math.isnan(data['utc_time'][0]):
+                current_zda.utc_seconds = int(data['utc_time'][0])
+            current_zda.day = data['day']
+            current_zda.month = data['month']
+            current_zda.year = data['year']
+            # current_zda.local_zone_hours = data['local_zone_hours']
+            # current_zda.local_zone_minutes = data['local_zone_minutes']
+            self.zda_pub.publish(current_zda)
         else:
             return False
         return True
