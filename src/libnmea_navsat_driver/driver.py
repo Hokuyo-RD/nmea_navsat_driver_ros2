@@ -152,6 +152,11 @@ class Ros2NMEADriver(Node):
         current_gga = Gpgga()
         current_gga.header.stamp = current_time
         current_gga.header.frame_id = frame_id
+        current_rmc = Gprmc()
+        current_rmc.header.stamp = current_time
+        current_rmc.header.frame_id = frame_id
+
+        current_gga.header.frame_id = frame_id
         if not self.use_GNSS_time:
             current_time_ref = TimeReference()
             current_time_ref.header.stamp = current_time
@@ -242,6 +247,22 @@ class Ros2NMEADriver(Node):
 
         elif 'RMC' in parsed_sentence:
             data = parsed_sentence['RMC']
+
+            # RMCセンテンスから完全なGprmcメッセージを構築してパブリッシュ
+            # この処理は useRMC フラグに関係なく実行される
+            current_rmc.utc_seconds = data['utc_time'][0] + data['utc_time'][1] / 1e9
+            current_rmc.position_status = "A" if data['fix_valid'] else "V"
+            current_rmc.lat = data['latitude']
+            current_rmc.lat_dir = data['latitude_direction']
+            current_rmc.lon = data['longitude']
+            current_rmc.lon_dir = data['longitude_direction']
+            current_rmc.speed = data['speed']
+            current_rmc.track = data['true_course']
+            # date, mag_var, mag_var_dir, mode_indicator are not parsed in RMC
+            # http://www.gpsinformation.org/dale/nmea.htm#RMC
+            # RMC message from u-blox does not contain mode indicator
+            current_rmc.mode_indicator = "A"
+            self.rmc_pub.publish(current_rmc)
 
             # Only publish a fix from RMC if the use_RMC flag is set.
             if self.use_RMC:
