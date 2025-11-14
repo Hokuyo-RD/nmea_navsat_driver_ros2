@@ -93,10 +93,10 @@ def convert_time(nmea_utc):
 
     # Resolve the ambiguity of day
     day_offset = int((utc_time.hour - hours)/12.0)
-    utc_time += datetime.timedelta(day_offset)
-    utc_time = utc_time.replace(hour=hours, minute=minutes, second=seconds)
+    new_utc_time = utc_time + datetime.timedelta(day_offset)
+    new_utc_time = new_utc_time.replace(hour=hours, minute=minutes, second=seconds)
 
-    unix_secs = calendar.timegm(utc_time.timetuple())
+    unix_secs = calendar.timegm(new_utc_time.timetuple())
     return (unix_secs, nanosecs)
 
 
@@ -135,7 +135,11 @@ def convert_time_rmc(date_str, time_str):
     hours = int(time_str[0:2])
     minutes = int(time_str[2:4])
     seconds = int(time_str[4:6])
-    nanosecs = int(time_str[7:]) * pow(10, 9 - len(time_str[7:]))
+    nanosecs = 0
+    if len(time_str) > 7:
+        subsec_str = time_str[7:]
+        if subsec_str:
+            nanosecs = int(subsec_str) * pow(10, 9 - len(subsec_str))
 
     unix_secs = calendar.timegm((years, months, days, hours, minutes, seconds))
     return (unix_secs, nanosecs)
@@ -201,6 +205,14 @@ parse_maps = {
         ("speed", convert_knots_to_mps, 5)
     ]
 }
+parse_maps["ZDA"] = [
+    ("utc_time", convert_time, 1),
+    ("day", safe_int, 2),
+    ("month", safe_int, 3),
+    ("year", safe_int, 4),
+    ("local_zone_hours", safe_int, 5),
+    ("local_zone_minutes", safe_int, 6)
+]
 
 
 def parse_nmea_sentence(nmea_sentence):
