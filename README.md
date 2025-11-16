@@ -3,5 +3,4 @@
 Add nmea_msgs Gpgga, Gprmc, Gpzda
 
 # setup
-Please refer: ↓↓
-https://github.com/hokuyo-rd/f9p_ichimill_ros2
+Please refer here: https://github.com/hokuyo-rd/f9p_ichimill_ros2
